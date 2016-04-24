@@ -45,6 +45,7 @@ namespace D4S.Client
             StartLocalFolderWatcher();
 
             // Activate watcher in shared folder
+            StartSharedFolderWatcher();
 
             this.eventLog.WriteEntry("D4S.Client started");
         }
@@ -54,6 +55,7 @@ namespace D4S.Client
             this.eventLog.WriteEntry("Stopping D4S.Client");
 
             this.StopLocalFolderWatcher();
+            this.StopSharedFolderWatcher();
 
             this.eventLog.WriteEntry("D4S.Client stopped");
         }
@@ -101,6 +103,22 @@ namespace D4S.Client
             this.eventLog.WriteEntry("Local folder watcher started");
         }
 
+        private void StartSharedFolderWatcher()
+        {
+            this.sharedWatcher = new FileSystemWatcher()
+            {
+                Path = this.sharedSavePath,
+                Filter = "*.trn",
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.FileName
+            };
+
+            this.sharedWatcher.Created += SharedWatcher_Created;
+            this.sharedWatcher.EnableRaisingEvents = true;
+
+            this.eventLog.WriteEntry("Shared folder watcher started");
+        }
+
         private void StopLocalFolderWatcher()
         {
             this.localWatcher.EnableRaisingEvents = false;
@@ -110,13 +128,30 @@ namespace D4S.Client
             this.eventLog.WriteEntry("Local folder watched stopped");
         }
 
-        private void LocalWatcher_CreatedOrChanged(object sender, FileSystemEventArgs e)s
+        private void StopSharedFolderWatcher()
+        {
+            this.sharedWatcher.EnableRaisingEvents = false;
+            this.sharedWatcher.Created -= SharedWatcher_Created;
+
+            this.eventLog.WriteEntry("Shared folder watched stopped");
+        }
+
+        private void LocalWatcher_CreatedOrChanged(object sender, FileSystemEventArgs e)
         {
             string relativePath = PathUtils.GetRelativePath(this.localSavePath, Path.GetDirectoryName(e.FullPath));
             string targetPath = Path.Combine(this.sharedSavePath, relativePath, e.Name);
             File.Copy(e.FullPath, targetPath, true);
 
-            this.eventLog.WriteEntry($"File created/changee in {e.Name} and copied to {targetPath}");
+            this.eventLog.WriteEntry($"Local watcher: file created/changed in {e.Name} and copied to {targetPath}");
+        }
+
+        private void SharedWatcher_Created(object sender, FileSystemEventArgs e)
+        {
+            string relativePath = PathUtils.GetRelativePath(this.sharedSavePath, Path.GetDirectoryName(e.FullPath));
+            string targetPath = Path.Combine(this.localSavePath, relativePath, e.Name);
+            File.Copy(e.FullPath, targetPath, true);
+
+            this.eventLog.WriteEntry($"Shared watcher: file created in {e.Name} and copied to {targetPath}");
         }
     }
 }
