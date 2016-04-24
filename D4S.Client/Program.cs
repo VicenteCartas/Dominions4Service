@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace D4S.Client
+﻿namespace D4S.Client
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.ServiceProcess;
+    using System.Text;
+    using System.Threading.Tasks;
+
     static class Program
     {
         /// <summary>
