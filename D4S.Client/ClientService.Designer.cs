@@ -31,7 +31,7 @@
             // 
             // ClientService
             // 
-            this.ServiceName = "Service1";
+            this.ServiceName = "D4S.Client";
 
         }
 
