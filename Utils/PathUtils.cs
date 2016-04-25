@@ -1,10 +1,6 @@
 ﻿namespace Utils
 {
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
 
     // http://stackoverflow.com/questions/1633028/calculating-the-path-relative-to-some-root-the-inverse-of-path-combine
     // Used without permission
