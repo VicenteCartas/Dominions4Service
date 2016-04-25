@@ -1,4 +1,4 @@
-﻿namespace D4S.Server
+﻿namespace D4S.Host
 {
     partial class ServerService
     {
