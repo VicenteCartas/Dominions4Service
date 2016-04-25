@@ -1,4 +1,4 @@
-﻿using Utils;
+﻿using System.Management;
 
 namespace D4S.Client
 {
@@ -13,6 +13,7 @@ namespace D4S.Client
     using System.ServiceProcess;
     using System.Text;
     using System.Threading.Tasks;
+    using Utils;
 
     public partial class ClientService : ServiceBase
     {
@@ -31,23 +32,26 @@ namespace D4S.Client
 
         protected override void OnStart(string[] args)
         {
-            this.InitializeLogs();
-            this.SetLocalFolder();
-            this.SetSharedFolder();
-            
-            // Offline changes
+            try
+            {
+                this.InitializeLogs();
+                this.SetLocalFolder();
+                this.SetSharedFolder();
 
-            // Part 1: check if there are turns in local not in shared
+                // TODO: Offline changes
+                // Part 1: check if there are turns in local not in shared
+                // Part 2: check if there are results in shared not in local
 
-            // Part 2: check if there are results in shared not in local
+                StartLocalFolderWatcher();
+                StartSharedFolderWatcher();
 
-            // Activate watcher in local folder
-            StartLocalFolderWatcher();
-
-            // Activate watcher in shared folder
-            StartSharedFolderWatcher();
-
-            this.eventLog.WriteEntry("D4S.Client started");
+                this.eventLog.WriteEntry("D4S.Client started");
+            }
+            catch (Exception ex)
+            {
+                this.eventLog?.WriteEntry($"D4S.Client exception: {ex.Message} - {ex.StackTrace}", EventLogEntryType.Error);
+                throw;
+            }
         }
 
         protected override void OnStop()
@@ -69,20 +73,48 @@ namespace D4S.Client
             }
 
             eventLog.Source = "D4S.Client";
-            eventLog.Log = "Information";
+            eventLog.Log = "Application";
 
             this.eventLog.WriteEntry("Starting D4S.Client");
         }
 
         private void SetLocalFolder()
         {
-            this.localSavePath = Path.Combine(Environment.GetEnvironmentVariable("APPDATA"), DominionsSaveData);
+            this.localSavePath = this.sharedSavePath = ConfigurationManager.AppSettings["local_folder"];
+            if (string.IsNullOrEmpty(this.localSavePath))
+            {
+                ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT UserName FROM Win32_ComputerSystem");
+                ManagementObjectCollection collection = searcher.Get();
+                string username = Path.GetFileName((string)collection.Cast<ManagementBaseObject>().First()["UserName"]);
+
+                this.localSavePath = Path.Combine(@"c:\users", username, @"AppData\Roaming", DominionsSaveData);
+            }
+
+            if (!Directory.Exists(this.localSavePath))
+            {
+                throw new ApplicationException($"Error: dominions savedgames folder is not in {this.localSavePath}");
+            }
+
             this.eventLog.WriteEntry($"Local data folder = {this.localSavePath}");
         }
 
         private void SetSharedFolder()
         {
             this.sharedSavePath = ConfigurationManager.AppSettings["shared_folder"];
+            if (string.IsNullOrEmpty(this.sharedSavePath))
+            {
+                ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT UserName FROM Win32_ComputerSystem");
+                ManagementObjectCollection collection = searcher.Get();
+                string username = Path.GetFileName((string)collection.Cast<ManagementBaseObject>().First()["UserName"]);
+
+                this.sharedSavePath = Path.Combine(@"c:\users", username, @"Dropbox\Dom4Games");
+            }
+
+            if (!Directory.Exists(this.sharedSavePath))
+            {
+                Directory.CreateDirectory(this.sharedSavePath);
+            }
+
             this.eventLog.WriteEntry($"Shared data folder = {this.sharedSavePath}");
         }
 
@@ -93,7 +125,7 @@ namespace D4S.Client
                 Path = this.localSavePath,
                 Filter = "*.2h",
                 IncludeSubdirectories = true,
-                NotifyFilter = NotifyFilters.FileName
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.Size
             };
 
             this.localWatcher.Created += LocalWatcher_CreatedOrChanged;
@@ -138,20 +170,28 @@ namespace D4S.Client
 
         private void LocalWatcher_CreatedOrChanged(object sender, FileSystemEventArgs e)
         {
-            string relativePath = PathUtils.GetRelativePath(this.localSavePath, Path.GetDirectoryName(e.FullPath));
-            string targetPath = Path.Combine(this.sharedSavePath, relativePath, e.Name);
-            File.Copy(e.FullPath, targetPath, true);
-
-            this.eventLog.WriteEntry($"Local watcher: file created/changed in {e.Name} and copied to {targetPath}");
+            this.CopyFile(this.localSavePath, this.sharedSavePath, e.FullPath);
         }
 
         private void SharedWatcher_Created(object sender, FileSystemEventArgs e)
         {
-            string relativePath = PathUtils.GetRelativePath(this.sharedSavePath, Path.GetDirectoryName(e.FullPath));
-            string targetPath = Path.Combine(this.localSavePath, relativePath, e.Name);
-            File.Copy(e.FullPath, targetPath, true);
+            this.CopyFile(this.sharedSavePath, this.localSavePath, e.FullPath);
+        }
 
-            this.eventLog.WriteEntry($"Shared watcher: file created in {e.Name} and copied to {targetPath}");
+        private void CopyFile(string sourceDir, string targetDir, string fileFullPath)
+        {
+            string relativePath = PathUtils.GetRelativePath(sourceDir, Path.GetDirectoryName(fileFullPath));
+            string targetPath = Path.Combine(targetDir, relativePath, Path.GetFileName(fileFullPath));
+
+            string targetDirectory = Path.GetDirectoryName(targetPath);
+            if (!Directory.Exists(targetDirectory))
+            {
+                Directory.CreateDirectory(targetDirectory);
+            }
+
+            File.Copy(fileFullPath, targetPath, true);
+
+            this.eventLog.WriteEntry($"File watcher: file created/changed in {fileFullPath} and copied to {targetPath}");
         }
     }
 }
