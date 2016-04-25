@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "D4S.Client", "D4S.Client\D4S.Client.csproj", "{37277381-2609-4B87-BDA8-C1FB9BE0B428}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "D4S.Server", "D4S.Server\D4S.Server.csproj", "{5E2A8169-C993-4EB2-AFD1-FF923D338C25}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "D4S.Host", "D4S.Server\D4S.Host.csproj", "{5E2A8169-C993-4EB2-AFD1-FF923D338C25}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "Utils\Utils.csproj", "{E7721DE5-6038-4D19-85D7-4569BF571C39}"
 EndProject

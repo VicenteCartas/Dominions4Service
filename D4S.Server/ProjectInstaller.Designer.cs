@@ -1,4 +1,4 @@
-﻿namespace D4S.Server
+﻿namespace D4S.Host
 {
     partial class ProjectInstaller
     {
@@ -42,6 +42,7 @@
             this.serviceInstaller.Description = "Host service for Dominions 4.";
             this.serviceInstaller.DisplayName = "D4S.Host";
             this.serviceInstaller.ServiceName = "D4S.Host";
+            this.serviceInstaller.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 
             // ProjectInstaller
             // 
