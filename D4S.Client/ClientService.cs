@@ -175,7 +175,10 @@ namespace D4S.Client
 
         private void SharedWatcher_Created(object sender, FileSystemEventArgs e)
         {
-            this.CopyFile(this.sharedSavePath, this.localSavePath, e.FullPath);
+            if (Dom4Utils.IsPlayerTurn(this.localSavePath, e.FullPath))
+            {
+                this.CopyFile(this.sharedSavePath, this.localSavePath, e.FullPath);
+            }
         }
 
         private void CopyFile(string sourceDir, string targetDir, string fileFullPath)
