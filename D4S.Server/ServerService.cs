@@ -95,7 +95,8 @@ namespace D4S.Host
 
             if (!Directory.Exists(this.localSaveFolder))
             {
-                throw new ApplicationException($"Error: dominions local savedgames folder could not be found in {this.localSaveFolder}");
+                throw new ApplicationException(
+                    $"Error: dominions local savedgames folder could not be found in {this.localSaveFolder}");
             }
 
             this.eventLog.WriteEntry($"Local data folder = {this.localSaveFolder}");
@@ -128,7 +129,8 @@ namespace D4S.Host
 
             if (!Directory.Exists(this.dominionsFolder))
             {
-                throw new ApplicationException($"Couldn't find dominions installation folder. Configure appconfig key \"dominions_folder\" ");
+                throw new ApplicationException(
+                    $"Couldn't find dominions installation folder. Configure appconfig key \"dominions_folder\" ");
             }
 
             this.eventLog.WriteEntry($"Dominions data folder = {this.dominionsFolder}");
@@ -168,7 +170,7 @@ namespace D4S.Host
             {
                 if (this.NeedsHost(game))
                 {
-                    this.RunHost(game);
+                    this.RunHost(game.Name);
                 }
             }
         }
@@ -184,20 +186,54 @@ namespace D4S.Host
             return false;
         }
 
-        private void RunHost(GameInformation information)
+        private void RunHost(string gameName)
         {
-            // Copy turns to local folder
-            this.RunDominionsProcess();
-            // Copy result to host
+            this.CopyPlayerTurns(gameName);
+            this.RunDominionsProcess(gameName);
+            this.CopyTurnResults(gameName);
         }
 
-        private void RunDominionsProcess()
+        private void CopyPlayerTurns(string gameName)
+        {
+            string[] files = Directory.GetFiles(Path.Combine(this.hostSaveFolder, gameName), "*.2h");
+            foreach (var file in files)
+            {
+                this.CopyFile(this.hostSaveFolder, this.localSaveFolder, file);
+            }
+        }
+
+        private void RunDominionsProcess(string gameName)
         {
             Process firstProc = new Process();
             firstProc.StartInfo.FileName = Path.Combine(dominionsFolder, DominionsExecutable);
-            firstProc.StartInfo.Arguments = "-g";
+            firstProc.StartInfo.Arguments = $"-g {gameName}";
             firstProc.Start();
             firstProc.WaitForExit();
+        }
+
+        private void CopyTurnResults(string gameName)
+        {
+            string[] files = Directory.GetFiles(Path.Combine(this.localSaveFolder, gameName), "*.trn");
+            foreach (var file in files)
+            {
+                this.CopyFile(this.localSaveFolder, this.hostSaveFolder, file);
+            }
+        }
+
+    private void CopyFile(string sourceDir, string targetDir, string fileFullPath)
+        {
+            string relativePath = PathUtils.GetRelativePath(sourceDir, Path.GetDirectoryName(fileFullPath));
+            string targetPath = Path.Combine(targetDir, relativePath, Path.GetFileName(fileFullPath));
+
+            string targetDirectory = Path.GetDirectoryName(targetPath);
+            if (!Directory.Exists(targetDirectory))
+            {
+                Directory.CreateDirectory(targetDirectory);
+            }
+
+            File.Copy(fileFullPath, targetPath, true);
+
+            this.eventLog.WriteEntry($"File copied from {fileFullPath} to {targetPath}");
         }
     }
 }
